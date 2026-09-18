@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FROSTLINE — Line Up List</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Cpath d='M18 26 L50 50 L82 26' stroke='%23fff' stroke-width='10' stroke-linecap='square' fill='none'/%3E%3Cpath d='M18 54 L50 78 L82 54' stroke='%23fff' stroke-width='10' stroke-linecap='square' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000; --bg-raised: #121212; --ink: #FFFFFF; --ink-soft: #B7B7B7;
+    --line: rgba(255,255,255,0.24); --line-strong: #FFFFFF; --stone: #7C7C7C;
+    --invert-bg: #FFFFFF; --invert-ink: #000000;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #FFFFFF; --bg-raised: #F1F1F1; --ink: #000000; --ink-soft: #4B4B4B;
+      --line: rgba(0,0,0,0.24); --line-strong: #000000; --stone: #6E6E6E;
+      --invert-bg: #000000; --invert-ink: #FFFFFF;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #FFFFFF; --bg-raised: #F1F1F1; --ink: #000000; --ink-soft: #4B4B4B;
+    --line: rgba(0,0,0,0.24); --line-strong: #000000; --stone: #6E6E6E;
+    --invert-bg: #000000; --invert-ink: #FFFFFF;
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --bg-raised: #121212; --ink: #FFFFFF; --ink-soft: #B7B7B7;
+    --line: rgba(255,255,255,0.24); --line-strong: #FFFFFF; --stone: #7C7C7C;
+    --invert-bg: #FFFFFF; --invert-ink: #000000;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { color: var(--ink); font-family: "Times New Roman", Georgia, Times, serif; min-height: 100vh; }
+  .display { font-family: "Antonio", "Arial Narrow", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.01em; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .banner { display: none; padding: 0.55rem 1.75rem; background: var(--bg-raised); border-bottom: 1px solid var(--line); font-size: 0.82rem; color: var(--ink-soft); text-align: center; }
+  .banner.show { display: block; }
+  .banner.warn { color: #FFB4B4; }
+
+  .masthead { max-width: 1220px; margin: 0 auto; padding: 2.2rem 1.75rem 1rem; border-bottom: 3px solid var(--line-strong); }
+  .masthead-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.2rem; flex-wrap: wrap; }
+  .brand-title { font-size: clamp(2.2rem, 5.5vw, 3.4rem); line-height: 0.85; margin: 0; }
+  .brand-sub { margin: 0.4rem 0 0; color: var(--ink-soft); font-size: 0.92rem; max-width: 42ch; }
+  .stats { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+  .stat { text-align: right; min-width: 54px; }
+  .stat .num { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 1.7rem; line-height: 1; display: block; }
+  .stat .lbl { font-size: 0.6rem; letter-spacing: 0.02em; color: var(--stone); text-transform: uppercase; font-family: "Antonio", sans-serif; }
+
+  .connected { max-width: 1220px; margin: 0 auto; padding: 0.7rem 1.75rem 0; display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.76rem; color: var(--stone); }
+  .connected a { text-decoration: underline; }
+
+  .toolbar { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem; display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--line); }
+  .search, select.filter { padding: 0.55rem 0.75rem; background: var(--bg-raised); border: 1px solid var(--line); color: var(--ink); font-family: "Times New Roman", Georgia, serif; font-size: 0.92rem; }
+  .search { flex: 1 1 200px; min-width: 160px; }
+  .search:focus, select.filter:focus { outline: 2px solid var(--line-strong); outline-offset: 1px; }
+  .btn-add { margin-left: auto; padding: 0.6rem 1.3rem; background: var(--ink); color: var(--bg); border: none; font-family: "Antonio", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.85rem; cursor: pointer; }
+  .btn-add:hover { opacity: 0.85; }
+  .btn-add:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+  .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .board { max-width: 1220px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+  .card { border: 1px solid var(--line); background: var(--bg-raised); cursor: pointer; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.12s ease; }
+  .card:hover { transform: translateY(-2px); }
+  .card:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+
+  .status-strip { padding: 0.4rem 0.9rem; font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .card[data-status="new_client"] .status-strip { border-bottom-style: dotted; color: var(--ink-soft); }
+  .card[data-status="proposing"] .status-strip { border-bottom-style: dashed; color: var(--ink); }
+  .card[data-status="mockup"] .status-strip { border-bottom: 2px dashed var(--line-strong); color: var(--ink); }
+  .card[data-status="revise"] .status-strip { background: repeating-linear-gradient(45deg, transparent, transparent 6px, var(--line) 6px, var(--line) 7px); color: var(--ink); }
+  .card[data-status="approved"] .status-strip { border-bottom: 3px solid var(--line-strong); color: var(--ink); }
+  .card[data-status="production"] { background: var(--invert-bg); color: var(--invert-ink); }
+  .card[data-status="production"] .status-strip { background: var(--invert-bg); color: var(--invert-ink); border-bottom: 3px solid var(--invert-ink); }
+
+  .rush-tag { font-size: 0.62rem; border: 1px solid currentColor; padding: 0.1rem 0.4rem; letter-spacing: 0.05em; }
+
+  .card-body { padding: 0.85rem 1rem 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+  .card-title.display { font-size: 1.25rem; line-height: 1.05; text-transform: none; }
+  .card-artist { font-size: 0.82rem; opacity: 0.85; }
+  .card-breakdown { font-size: 0.78rem; opacity: 0.75; }
+  .card-deadline { font-size: 0.76rem; opacity: 0.8; }
+  .card-files { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.15rem; }
+  .card-file-chip { font-size: 0.72rem; text-decoration: underline; opacity: 0.85; }
+  .card-updated { font-size: 0.68rem; color: var(--stone); margin-top: auto; padding-top: 0.3rem; }
+  .card[data-status="production"] .card-updated { color: inherit; opacity: 0.6; }
+
+  .empty-state { grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: var(--stone); }
+  .empty-state .display { font-size: 1.5rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; padding: 4vh 1rem; overflow-y: auto; z-index: 50; }
+  .overlay.open { display: flex; }
+  .drawer { background: var(--bg); border: 1px solid var(--line-strong); max-width: 520px; width: 100%; padding: 1.7rem; }
+  .drawer h2 { font-size: 1.4rem; margin: 0 0 1.05rem; }
+  .field { margin-bottom: 0.9rem; }
+  .field label.display { display: block; font-size: 0.68rem; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 0.3rem; }
+  .field input[type="text"], .field input[type="date"], .field select, .field textarea {
+    width: 100%; padding: 0.52rem 0.68rem; background: var(--bg-raised); border: 1px solid var(--line);
+    color: var(--ink); font-family: "Times New Roman", Georgia, serif; font-size: 0.92rem;
+  }
+  .field textarea { resize: vertical; min-height: 54px; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--line-strong); outline-offset: 1px; }
+  .field-row { display: flex; gap: 0.6rem; }
+  .field-row .field { flex: 1; }
+  .checkline { display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; margin-bottom: 0.6rem; }
+  .checkline input { width: auto; }
+
+  .file-block { border: 1px dashed var(--line); padding: 0.7rem; margin-bottom: 0.5rem; }
+  .file-block input[type="file"] { font-size: 0.78rem; color: var(--ink-soft); width: 100%; }
+  .file-current-list { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.4rem; }
+  .file-current { font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .file-current a { text-decoration: underline; }
+  .file-remove { font-size: 0.72rem; color: var(--stone); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; white-space: nowrap; }
+  .upload-status { font-size: 0.74rem; color: var(--stone); }
+
+  .drawer-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.2rem; }
+  .btn-primary, .btn-secondary, .btn-danger {
+    padding: 0.55rem 1.05rem; font-family: "Antonio", sans-serif; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; font-size: 0.78rem; cursor: pointer; border: 1px solid var(--line-strong); background: transparent; color: var(--ink);
+  }
+  .btn-primary { background: var(--ink); color: var(--bg); }
+  .btn-danger { color: var(--stone); border-color: var(--line); margin-right: auto; }
+  .btn-primary:hover, .btn-secondary:hover { opacity: 0.85; }
+  .btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+
+  footer { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem 2.5rem; color: var(--stone); font-size: 0.76rem; }
+
+  @media (max-width: 900px) { .board { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) {
+    .board { grid-template-columns: 1fr; }
+    .stats { justify-content: flex-start; gap: 0.9rem; }
+    .search, select.filter, .btn-add { min-height: 44px; }
+    .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---------- grain texture (subtle, monochrome, print-poster feel) ---------- */
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.035; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- brand lockup ---------- */
+  .brand-lockup {
+    max-width: 1220px; margin: 0 auto;
+    padding: 2.4rem 1.75rem 1.6rem;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 0.55rem;
+  }
+  .brand-mark {
+    width: 46px; height: 46px;
+    animation: markIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .brand-mark path { stroke: var(--ink); }
+  .brand-word {
+    font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    animation: wordIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  }
+  .brand-eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.22em;
+    color: var(--stone);
+    animation: wordIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+  }
+  .brand-rule {
+    width: 34px; height: 2px; background: var(--line-strong);
+    margin-top: 0.35rem;
+    animation: ruleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
+  }
+  @keyframes markIn { from { opacity: 0; transform: translateY(-6px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes wordIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ruleIn { from { opacity: 0; width: 0; } to { opacity: 1; width: 34px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .brand-mark, .brand-word, .brand-eyebrow, .brand-rule { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<div class="banner" id="syncBanner"></div>
+
+<div class="brand-lockup">
+  <svg class="brand-mark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Frostline mark">
+    <path d="M14 24 L50 50 L86 24" stroke-width="9" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M14 54 L50 80 L86 54" stroke-width="9" stroke-linecap="square" stroke-linejoin="miter"/>
+  </svg>
+  <div class="brand-word display">Frostline</div>
+  <div class="brand-eyebrow display">Production Tracker</div>
+  <div class="brand-rule"></div>
+</div>
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div>
+      <h1 class="brand-title display">Line Up List</h1>
+      <p class="brand-sub">Every order, from first client contact through design approval. One board for the artists.</p>
+    </div>
+    <div class="stats" id="statsBar"></div>
+  </div>
+</header>
+
+<div class="connected">
+  <span>Connected tools:</span>
+  <a href="https://frostline-order-intake.vercel.app/" target="_blank" rel="noopener">Client intake form ↗</a>
+  <a href="https://frostline-tracker-htz1.vercel.app/" target="_blank" rel="noopener">Production &amp; fulfillment tracker ↗</a>
+</div>
+
+<div class="toolbar">
+  <input type="text" class="search" id="searchInput" placeholder="Search client or artist…" aria-label="Search orders">
+  <select class="filter" id="artistFilter" aria-label="Filter by artist">
+    <option value="">All artists</option>
+  </select>
+  <select class="filter" id="statusFilter" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    <option value="new_client">New Client</option>
+    <option value="proposing">Proposing Design</option>
+    <option value="mockup">For Mock Up</option>
+    <option value="revise">Request for Revise</option>
+    <option value="approved">Approved</option>
+    <option value="production">In Production</option>
+  </select>
+  <button class="btn-add" id="addBtn">+ New Order</button>
+</div>
+
+<main class="board" id="board"></main>
+
+<footer id="footerNote">Loading…</footer>
+
+<div class="overlay" id="overlay">
+  <div class="drawer">
+    <h2 class="display" id="drawerTitle">New Order</h2>
+
+    <div class="field">
+      <label class="display" for="fClient">Client / Order name</label>
+      <input type="text" id="fClient" placeholder="e.g. Green Archer II">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="display" for="fArtist">Assigned artist</label>
+        <input type="text" id="fArtist" placeholder="e.g. Kenji">
+      </div>
+      <div class="field">
+        <label class="display" for="fStatus">Status</label>
+        <select id="fStatus">
+          <option value="new_client">New Client</option>
+          <option value="proposing">Proposing Design</option>
+          <option value="mockup">For Mock Up</option>
+          <option value="revise">Request for Revise</option>
+          <option value="approved">Approved</option>
+          <option value="production">In Production</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="display" for="fBreakdown">Breakdown</label>
+      <input type="text" id="fBreakdown" placeholder="e.g. 21 pcs Shirt / 2 pcs Polo / 7 pcs Short">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="display" for="fDeadline">Deadline</label>
+        <input type="date" id="fDeadline">
+      </div>
+      <div class="field" style="display:flex; flex-direction:column; justify-content:flex-end;">
+        <label class="checkline" style="margin-bottom:0.3rem;"><input type="checkbox" id="fTentative"> Deadline tentative</label>
+        <label class="checkline" style="margin-bottom:0;"><input type="checkbox" id="fRush"> Rush / Pahabol</label>
+      </div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <label class="display">Team logo</label>
+      <div class="file-block">
+        <input type="file" id="fLogo" accept="image/*,.pdf">
+        <div id="logoMeta"></div>
+      </div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <label class="display">Inspiration &amp; references</label>
+      <div class="file-block">
+        <input type="file" id="fRefs" accept="image/*,.pdf" multiple>
+        <div id="refsMeta" class="file-current-list"></div>
+      </div>
+    </div>
+    <!-- File uploads disabled for now — no file storage connected yet.
+         Re-enable by removing the two display:none styles above once
+         Cloudinary (or another storage provider) is wired in. -->
+
+    <div class="field">
+      <label class="display" for="fNotes">Notes / flag</label>
+      <textarea id="fNotes" placeholder="Anything the artist needs to know"></textarea>
+    </div>
+
+    <div class="drawer-actions">
+      <button class="btn-danger" id="deleteBtn" style="display:none;">Remove</button>
+      <button class="btn-secondary" id="cancelBtn">Cancel</button>
+      <button class="btn-primary" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ---------------------------------------------------------------
+  // 1) PASTE YOUR FIREBASE CONFIG BELOW
+  //    Firebase console → Project settings → General → Your apps → SDK setup and config
+  // ---------------------------------------------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyAs1OYLvctiQakJ0Fj6aeEXQKqKZIjCeq0",
+    authDomain: "frostline-production-tracker.firebaseapp.com",
+    projectId: "frostline-production-tracker",
+    storageBucket: "frostline-production-tracker.firebasestorage.app",
+    messagingSenderId: "29430505138",
+    appId: "1:29430505138:web:fca9f08f816d509623f3ab",
+    measurementId: "G-5RVQ7HF6QK"
+  };
+  const CONFIG_IS_PLACEHOLDER = firebaseConfig.apiKey === "REPLACE_ME";
+
+  // NOTE: writing to a separate "design_orders" collection for now, not the
+  // real "orders" collection — until we confirm its field names, to avoid
+  // corrupting live production data. See README for the merge step.
+  const ORDERS_COLLECTION = "design_orders";
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, doc, setDoc, deleteDoc, onSnapshot, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+  const STATUS_LABELS = {
+    new_client: 'New Client', proposing: 'Proposing Design', mockup: 'For Mock Up',
+    revise: 'Request for Revise', approved: 'Approved', production: 'In Production'
+  };
+  const STATUS_ORDER = ['new_client', 'proposing', 'mockup', 'revise', 'approved', 'production'];
+  const LOCAL_KEY = 'frostline-lineup-fallback-v1';
+
+  let db = null, storage = null, liveMode = false;
+  let orders = [];
+  let editingId = null;
+  let pendingLogoFile = null, pendingLogoRemove = false;
+  let pendingRefFiles = [];
+  let pendingRefRemoveIds = new Set();
+
+  const banner = document.getElementById('syncBanner');
+  const board = document.getElementById('board');
+  const statsBar = document.getElementById('statsBar');
+  const footerNote = document.getElementById('footerNote');
+  const searchInput = document.getElementById('searchInput');
+  const artistFilter = document.getElementById('artistFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const overlay = document.getElementById('overlay');
+  const drawerTitle = document.getElementById('drawerTitle');
+  const deleteBtn = document.getElementById('deleteBtn');
+  const logoMeta = document.getElementById('logoMeta');
+  const refsMeta = document.getElementById('refsMeta');
+  const addBtn = document.getElementById('addBtn');
+
+  function showBanner(text, warn) {
+    banner.textContent = text;
+    banner.classList.add('show');
+    if (warn) banner.classList.add('warn');
+  }
+
+  function loadLocal() {
+    try { const raw = localStorage.getItem(LOCAL_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { console.error('Local read failed', e); return []; }
+  }
+  function saveLocal(list) {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); }
+    catch (e) { console.error('Local write failed', e); }
+  }
+
+  const seedRows = [
+    { client: 'Green Archer II', artist: 'Kenji', status: 'mockup', breakdown: '21 pcs Shirt / 2 pcs Polo / 7 pcs Short', deadline: '', tentative: true, rush: false, notes: 'Awaiting logo file from client.' },
+    { client: 'Pilipinas Relay Team', artist: 'Vera', status: 'revise', breakdown: '30 pcs Singlet', deadline: '', tentative: false, rush: true, notes: 'Client wants bolder chevron on the back.' },
+    { client: 'PR Project Community', artist: 'Priya', status: 'approved', breakdown: '50 pcs Tshirt', deadline: '', tentative: false, rush: false, notes: 'Signed off — ready to hand to production.' },
+    { client: 'Northside Track Club', artist: 'Sam', status: 'new_client', breakdown: '', deadline: '', tentative: true, rush: false, notes: 'Just submitted intake form, no brief yet.' }
+  ];
+
+  async function init() {
+    if (CONFIG_IS_PLACEHOLDER) {
+      liveMode = false;
+      addBtn.disabled = false;
+      showBanner('Firebase isn\'t configured yet — running in local demo mode. Paste your config at the top of index.html and redeploy to go live.', true);
+      footerNote.textContent = 'Local demo mode — data stays in this browser only until Firebase is connected.';
+      bootLocal();
+      return;
+    }
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      storage = getStorage(app);
+      liveMode = true;
+      footerNote.textContent = 'Live board — synced in real time for everyone on your team.';
+      await subscribeLive();
+    } catch (e) {
+      console.error('Firebase init failed', e);
+      liveMode = false;
+      showBanner('Could not connect to Firebase — check your config and Firestore/Storage rules. Running in local mode for now.', true);
+      footerNote.textContent = 'Local demo mode — Firebase connection failed.';
+      bootLocal();
+    }
+  }
+
+  function bootLocal() {
+    orders = loadLocal();
+    if (orders.length === 0) {
+      orders = seedRows.map((r, i) => ({ id: 'seed' + i, ...r, logoFile: null, refFiles: [], updatedAt: new Date().toISOString() }));
+      saveLocal(orders);
+    }
+    renderAll();
+  }
+
+  async function subscribeLive() {
+    const col = collection(db, ORDERS_COLLECTION);
+    try {
+      const snap = await getDocs(col);
+      if (snap.empty) {
+        for (const r of seedRows) {
+          await addDoc(col, { ...r, logoFile: null, refFiles: [], updatedAt: new Date().toISOString() });
+        }
+      }
+    } catch (e) { console.error('Seed check failed', e); }
+
+    onSnapshot(col,
+      (qsnap) => { orders = qsnap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+      (err) => { console.error('Firestore subscription error', err); showBanner('Live sync interrupted — check your Firestore rules and reload.', true); }
+    );
+  }
+
+  function renderAll() { renderArtistOptions(); renderStats(); renderBoard(); }
+
+  function renderArtistOptions() {
+    const current = artistFilter.value;
+    const artists = Array.from(new Set(orders.map(o => (o.artist || '').trim()).filter(Boolean))).sort();
+    artistFilter.innerHTML = '<option value="">All artists</option>' + artists.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+    if (artists.includes(current)) artistFilter.value = current;
+  }
+
+  function renderStats() {
+    const counts = { new_client: 0, proposing: 0, mockup: 0, revise: 0, approved: 0, production: 0 };
+    orders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
+    let html = `<div class="stat"><span class="num display">${orders.length}</span><span class="lbl">Total</span></div>`;
+    STATUS_ORDER.forEach(k => {
+      html += `<div class="stat"><span class="num display">${counts[k]}</span><span class="lbl">${STATUS_LABELS[k]}</span></div>`;
+    });
+    statsBar.innerHTML = html;
+  }
+
+  function renderBoard() {
+    const q = searchInput.value.trim().toLowerCase();
+    const af = artistFilter.value;
+    const sf = statusFilter.value;
+
+    let filtered = orders.filter(o => {
+      if (af && o.artist !== af) return false;
+      if (sf && o.status !== sf) return false;
+      if (q && !((o.client || '').toLowerCase().includes(q) || (o.artist || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+    filtered.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+
+    board.innerHTML = '';
+    if (filtered.length === 0) {
+      board.innerHTML = `<div class="empty-state"><div class="display">Nothing here yet</div><div>Try a different filter, or add a new order.</div></div>`;
+      return;
+    }
+    filtered.forEach(o => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.status = o.status;
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `Edit ${o.client}`);
+
+      const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
+      const files = [];
+      if (o.logoFile && o.logoFile.url) files.push(`<a class="card-file-chip" href="${o.logoFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Logo</a>`);
+      if (Array.isArray(o.refFiles) && o.refFiles.length) {
+        o.refFiles.forEach((f, i) => files.push(`<a class="card-file-chip" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ref ${i + 1}</a>`));
+      }
+
+      card.innerHTML = `
+        <div class="status-strip"><span>${STATUS_LABELS[o.status] || o.status}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
+        <div class="card-body">
+          <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
+          ${o.artist ? `<div class="card-artist">${escapeHtml(o.artist)}</div>` : ''}
+          ${o.breakdown ? `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>` : ''}
+          ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
+          ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
+          <div class="card-updated">Updated ${formatDate(o.updatedAt)}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => openDrawer(o.id));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(o.id); } });
+      board.appendChild(card);
+    });
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso.length <= 10 ? iso + 'T00:00:00' : iso);
+    if (isNaN(d)) return '—';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function openDrawer(id) {
+    editingId = id || null;
+    pendingLogoFile = null; pendingLogoRemove = false;
+    pendingRefFiles = []; pendingRefRemoveIds = new Set();
+    const o = id ? orders.find(x => x.id === id) : null;
+    drawerTitle.textContent = o ? 'Edit Order' : 'New Order';
+    document.getElementById('fClient').value = o ? (o.client || '') : '';
+    document.getElementById('fArtist').value = o ? (o.artist || '') : '';
+    document.getElementById('fStatus').value = o ? o.status : 'new_client';
+    document.getElementById('fBreakdown').value = o ? (o.breakdown || '') : '';
+    document.getElementById('fDeadline').value = o ? (o.deadline || '') : '';
+    document.getElementById('fTentative').checked = o ? !!o.tentative : false;
+    document.getElementById('fRush').checked = o ? !!o.rush : false;
+    document.getElementById('fNotes').value = o ? (o.notes || '') : '';
+    document.getElementById('fLogo').value = '';
+    document.getElementById('fRefs').value = '';
+    renderLogoMeta(o);
+    renderRefsMeta(o);
+    deleteBtn.style.display = o ? 'inline-block' : 'none';
+    overlay.classList.add('open');
+    document.getElementById('fClient').focus();
+  }
+
+  function renderLogoMeta(o) {
+    if (o && o.logoFile && o.logoFile.url && !pendingLogoRemove) {
+      logoMeta.innerHTML = `<div class="file-current"><a href="${o.logoFile.url}" target="_blank" rel="noopener">${escapeHtml(o.logoFile.name || 'Current logo')}</a><button type="button" class="file-remove" id="removeLogoBtn">remove</button></div>`;
+      const rm = document.getElementById('removeLogoBtn');
+      if (rm) rm.addEventListener('click', () => { pendingLogoRemove = true; renderLogoMeta(null); });
+    } else {
+      logoMeta.innerHTML = pendingLogoRemove ? `<span class="upload-status">Logo will be removed on save.</span>` : '';
+    }
+  }
+
+  function renderRefsMeta(o) {
+    const existing = (o && Array.isArray(o.refFiles)) ? o.refFiles.filter(f => !pendingRefRemoveIds.has(f.path)) : [];
+    let html = existing.map(f => `<div class="file-current"><a href="${f.url}" target="_blank" rel="noopener">${escapeHtml(f.name || 'Reference')}</a><button type="button" class="file-remove" data-remove-ref="${f.path}">remove</button></div>`).join('');
+    if (pendingRefFiles.length) {
+      html += pendingRefFiles.map(f => `<div class="upload-status">Will upload "${escapeHtml(f.name)}" on save.</div>`).join('');
+    }
+    refsMeta.innerHTML = html;
+    refsMeta.querySelectorAll('[data-remove-ref]').forEach(btn => {
+      btn.addEventListener('click', () => { pendingRefRemoveIds.add(btn.getAttribute('data-remove-ref')); renderRefsMeta(o); });
+    });
+  }
+
+  function closeDrawer() {
+    overlay.classList.remove('open'); editingId = null;
+    pendingLogoFile = null; pendingLogoRemove = false;
+    pendingRefFiles = []; pendingRefRemoveIds = new Set();
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => openDrawer(null));
+  document.getElementById('cancelBtn').addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeDrawer(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeDrawer(); });
+
+  document.getElementById('fLogo').addEventListener('change', (e) => {
+    pendingLogoFile = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    pendingLogoRemove = false;
+    if (pendingLogoFile) logoMeta.innerHTML = `<span class="upload-status">Will upload "${escapeHtml(pendingLogoFile.name)}" on save.</span>`;
+  });
+  document.getElementById('fRefs').addEventListener('change', (e) => {
+    pendingRefFiles = Array.from(e.target.files || []);
+    const existing = editingId ? orders.find(x => x.id === editingId) : null;
+    renderRefsMeta(existing);
+  });
+
+  async function uploadToStorage(file, pathPrefix) {
+    const path = `${pathPrefix}/${Date.now()}-${file.name}`;
+    const fileRef = ref(storage, path);
+    await uploadBytes(fileRef, file);
+    const url = await getDownloadURL(fileRef);
+    return { path, url, name: file.name };
+  }
+  async function deleteFromStorage(path) {
+    try { await deleteObject(ref(storage, path)); } catch (e) { console.error('Storage delete failed', e); }
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const client = document.getElementById('fClient').value.trim();
+    if (!client) { document.getElementById('fClient').focus(); return; }
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    const existing = editingId ? orders.find(x => x.id === editingId) : null;
+    let logoFile = existing ? existing.logoFile : null;
+    let refFiles = existing && Array.isArray(existing.refFiles) ? existing.refFiles.slice() : [];
+    const folderKey = editingId || ('new-' + Date.now());
+
+    if (pendingLogoRemove) {
+      if (liveMode && logoFile && logoFile.path) await deleteFromStorage(logoFile.path);
+      logoFile = null;
+    }
+    if (pendingLogoFile) {
+      if (liveMode) {
+        try { logoFile = await uploadToStorage(pendingLogoFile, `${ORDERS_COLLECTION}/${folderKey}/logo`); }
+        catch (e) { console.error('Logo upload failed', e); alert('Logo upload failed. The rest of the order will still save.'); }
+      } else {
+        alert('File uploads need a live Firebase connection — this order will save without the new logo.');
+      }
+    }
+
+    if (pendingRefRemoveIds.size) {
+      if (liveMode) { for (const p of pendingRefRemoveIds) await deleteFromStorage(p); }
+      refFiles = refFiles.filter(f => !pendingRefRemoveIds.has(f.path));
+    }
+    if (pendingRefFiles.length) {
+      if (liveMode) {
+        for (const file of pendingRefFiles) {
+          try { refFiles.push(await uploadToStorage(file, `${ORDERS_COLLECTION}/${folderKey}/refs`)); }
+          catch (e) { console.error('Reference upload failed', e); alert('One reference file failed to upload; the rest of the order will still save.'); }
+        }
+      } else {
+        alert('File uploads need a live Firebase connection — this order will save without the new references.');
+      }
+    }
+
+    const record = {
+      client,
+      artist: document.getElementById('fArtist').value.trim(),
+      status: document.getElementById('fStatus').value,
+      breakdown: document.getElementById('fBreakdown').value.trim(),
+      deadline: document.getElementById('fDeadline').value,
+      tentative: document.getElementById('fTentative').checked,
+      rush: document.getElementById('fRush').checked,
+      notes: document.getElementById('fNotes').value.trim(),
+      logoFile, refFiles,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (liveMode) {
+      try {
+        if (editingId) await setDoc(doc(db, ORDERS_COLLECTION, editingId), record);
+        else await addDoc(collection(db, ORDERS_COLLECTION), record);
+      } catch (e) { console.error('Save failed', e); alert('Save failed — check your connection and Firestore rules, then try again.'); }
+    } else {
+      if (editingId) orders = orders.map(o => o.id === editingId ? { id: editingId, ...record } : o);
+      else orders.push({ id: 'o' + Date.now(), ...record });
+      saveLocal(orders);
+      renderAll();
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+    closeDrawer();
+  });
+
+  deleteBtn.addEventListener('click', async () => {
+    if (!editingId) return;
+    const existing = orders.find(x => x.id === editingId);
+    if (liveMode) {
+      try {
+        if (existing) {
+          if (existing.logoFile && existing.logoFile.path) await deleteFromStorage(existing.logoFile.path);
+          if (Array.isArray(existing.refFiles)) { for (const f of existing.refFiles) await deleteFromStorage(f.path); }
+        }
+        await deleteDoc(doc(db, ORDERS_COLLECTION, editingId));
+      } catch (e) { console.error('Delete failed', e); alert('Remove failed — check your connection and try again.'); }
+    } else {
+      orders = orders.filter(o => o.id !== editingId);
+      saveLocal(orders);
+      renderAll();
+    }
+    closeDrawer();
+  });
+
+  [searchInput, artistFilter, statusFilter].forEach(el => {
+    el.addEventListener('input', renderBoard);
+    el.addEventListener('change', renderBoard);
+  });
+
+  init();
+</script>
+</body>
+</html>
