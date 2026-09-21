@@ -110,26 +110,6 @@
   .checkline { display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; margin-bottom: 0.6rem; }
   .checkline input { width: auto; }
 
-  .status-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; }
-  .status-check { display: flex; align-items: center; gap: 0.55rem; font-size: 0.86rem; cursor: pointer; user-select: none; }
-  .status-check input { position: absolute; opacity: 0; width: 0; height: 0; }
-  .status-check .tick {
-    width: 18px; height: 18px; flex: 0 0 18px;
-    border: 1.5px solid var(--line-strong);
-    display: inline-block; position: relative;
-  }
-  .status-check input:checked + .tick { background: var(--ink); }
-  .status-check input:checked + .tick::after {
-    content: ""; position: absolute; left: 3px; top: 3px; right: 3px; bottom: 3px;
-    background: var(--bg);
-  }
-  .status-check input:focus-visible + .tick { outline: 2px solid var(--line-strong); outline-offset: 2px; }
-
-  /* ---------- checklist row shown on each card ---------- */
-  .card-checklist { display: flex; gap: 0.3rem; margin-top: 0.3rem; }
-  .check-sq { width: 11px; height: 11px; border: 1px solid currentColor; opacity: 0.4; flex: 0 0 11px; }
-  .check-sq.done { opacity: 1; background: currentColor; }
-
   .file-block { border: 1px dashed var(--line); padding: 0.7rem; margin-bottom: 0.5rem; }
   .file-block input[type="file"] { font-size: 0.78rem; color: var(--ink-soft); width: 100%; }
   .file-current-list { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.4rem; }
@@ -246,6 +226,7 @@
     <option value="approved">Approved</option>
     <option value="production">In Production</option>
   </select>
+  <label class="checkline" style="margin-bottom:0;"><input type="checkbox" id="showCompleted"> Show completed</label>
   <button class="btn-add" id="addBtn">+ New Order</button>
 </div>
 
@@ -263,15 +244,15 @@
     </div>
 
     <div class="field">
-      <label class="display">Status</label>
-      <div class="status-checks" id="statusChecks">
-        <label class="status-check"><input type="checkbox" value="new_client"><span class="tick"></span>New Client</label>
-        <label class="status-check"><input type="checkbox" value="proposing"><span class="tick"></span>Proposing Design</label>
-        <label class="status-check"><input type="checkbox" value="mockup"><span class="tick"></span>For Mock Up</label>
-        <label class="status-check"><input type="checkbox" value="revise"><span class="tick"></span>Error Revision</label>
-        <label class="status-check"><input type="checkbox" value="approved"><span class="tick"></span>Approved</label>
-        <label class="status-check"><input type="checkbox" value="production"><span class="tick"></span>In Production</label>
-      </div>
+      <label class="display" for="fStatus">Status</label>
+      <select id="fStatus">
+        <option value="new_client">New Client</option>
+        <option value="proposing">Proposing Design</option>
+        <option value="mockup">For Mock Up</option>
+        <option value="revise">Error Revision</option>
+        <option value="approved">Approved</option>
+        <option value="production">In Production</option>
+      </select>
     </div>
 
     <div class="field">
@@ -316,6 +297,7 @@
 
     <div class="drawer-actions">
       <button class="btn-danger" id="deleteBtn" style="display:none;">Remove</button>
+      <button class="btn-secondary" id="completeBtn" style="display:none;">Mark as Complete</button>
       <button class="btn-secondary" id="cancelBtn">Cancel</button>
       <button class="btn-primary" id="saveBtn">Save</button>
     </div>
@@ -396,7 +378,6 @@
   const logoMeta = document.getElementById('logoMeta');
   const refsMeta = document.getElementById('refsMeta');
   const addBtn = document.getElementById('addBtn');
-  const statusChecks = document.getElementById('statusChecks');
 
   function showBanner(text, warn) {
     banner.textContent = text;
@@ -474,20 +455,25 @@
   function renderAll() { renderStats(); renderBoard(); }
 
   function renderStats() {
+    const active = orders.filter(o => !o.completed);
+    const completedCount = orders.length - active.length;
     const counts = { new_client: 0, proposing: 0, mockup: 0, revise: 0, approved: 0, production: 0 };
-    orders.forEach(o => { getStatuses(o).forEach(s => { if (counts[s] !== undefined) counts[s]++; }); });
-    let html = `<div class="stat"><span class="num display">${orders.length}</span><span class="lbl">Total</span></div>`;
+    active.forEach(o => { getStatuses(o).forEach(s => { if (counts[s] !== undefined) counts[s]++; }); });
+    let html = `<div class="stat"><span class="num display">${active.length}</span><span class="lbl">Total</span></div>`;
     STATUS_ORDER.forEach(k => {
       html += `<div class="stat"><span class="num display">${counts[k]}</span><span class="lbl">${STATUS_LABELS[k]}</span></div>`;
     });
+    html += `<div class="stat"><span class="num display">${completedCount}</span><span class="lbl">Completed</span></div>`;
     statsBar.innerHTML = html;
   }
 
   function renderBoard() {
     const q = searchInput.value.trim().toLowerCase();
     const sf = statusFilter.value;
+    const showCompleted = document.getElementById('showCompleted').checked;
 
     let filtered = orders.filter(o => {
+      if (!showCompleted && o.completed) return false;
       if (sf && !getStatuses(o).includes(sf)) return false;
       if (q && !(o.client || '').toLowerCase().includes(q)) return false;
       return true;
@@ -500,7 +486,6 @@
       return;
     }
     filtered.forEach(o => {
-      const statuses = getStatuses(o);
       const primary = primaryStatus(o);
       const card = document.createElement('div');
       card.className = 'card';
@@ -508,6 +493,7 @@
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
       card.setAttribute('aria-label', `Edit ${o.client}`);
+      if (o.completed) card.style.opacity = '0.55';
 
       const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
       const files = [];
@@ -515,15 +501,13 @@
       if (Array.isArray(o.refFiles) && o.refFiles.length) {
         o.refFiles.forEach((f, i) => files.push(`<a class="card-file-chip" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ref ${i + 1}</a>`));
       }
-      const checklist = STATUS_ORDER.map(k => `<span class="check-sq${statuses.includes(k) ? ' done' : ''}" title="${STATUS_LABELS[k]}"></span>`).join('');
 
       card.innerHTML = `
-        <div class="status-strip"><span>${primary ? STATUS_LABELS[primary] : 'No status yet'}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
+        <div class="status-strip"><span>${o.completed ? 'Completed' : (primary ? STATUS_LABELS[primary] : 'No status yet')}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
         <div class="card-body">
           <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
           ${o.breakdown ? `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>` : ''}
           ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
-          <div class="card-checklist">${checklist}</div>
           ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
           <div class="card-updated">Updated ${formatDate(o.updatedAt)}</div>
         </div>
@@ -553,10 +537,7 @@
     const o = id ? orders.find(x => x.id === id) : null;
     drawerTitle.textContent = o ? 'Edit Order' : 'New Order';
     document.getElementById('fClient').value = o ? (o.client || '') : '';
-    const activeStatuses = o ? getStatuses(o) : ['new_client'];
-    statusChecks.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      cb.checked = activeStatuses.includes(cb.value);
-    });
+    document.getElementById('fStatus').value = o ? (primaryStatus(o) || 'new_client') : 'new_client';
     document.getElementById('fBreakdown').value = o ? (o.breakdown || '') : '';
     document.getElementById('fDeadline').value = o ? (o.deadline || '') : '';
     document.getElementById('fTentative').checked = o ? !!o.tentative : false;
@@ -567,6 +548,13 @@
     renderLogoMeta(o);
     renderRefsMeta(o);
     deleteBtn.style.display = o ? 'inline-block' : 'none';
+    const completeBtn = document.getElementById('completeBtn');
+    if (o) {
+      completeBtn.style.display = 'inline-block';
+      completeBtn.textContent = o.completed ? 'Restore to active' : 'Mark as Complete';
+    } else {
+      completeBtn.style.display = 'none';
+    }
     overlay.classList.add('open');
     document.getElementById('fClient').focus();
   }
@@ -668,13 +656,14 @@
 
     const record = {
       client,
-      statuses: Array.from(statusChecks.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value),
+      statuses: [document.getElementById('fStatus').value],
       breakdown: document.getElementById('fBreakdown').value.trim(),
       deadline: document.getElementById('fDeadline').value,
       tentative: document.getElementById('fTentative').checked,
       rush: document.getElementById('fRush').checked,
       notes: document.getElementById('fNotes').value.trim(),
       logoFile, refFiles,
+      completed: existing ? !!existing.completed : false,
       updatedAt: new Date().toISOString()
     };
 
