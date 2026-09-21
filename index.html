@@ -291,6 +291,11 @@
          Cloudinary (or another storage provider) is wired in. -->
 
     <div class="field">
+      <label class="display" for="fFileLink">Attached file <span style="text-transform:none; color:var(--stone); letter-spacing:0;">(optional — paste a Drive/Dropbox link)</span></label>
+      <input type="url" id="fFileLink" placeholder="https://drive.google.com/…">
+    </div>
+
+    <div class="field">
       <label class="display" for="fNotes">Notes / flag</label>
       <textarea id="fNotes" placeholder="Anything the artist needs to know"></textarea>
     </div>
@@ -497,6 +502,7 @@
 
       const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
       const files = [];
+      if (o.fileLink) files.push(`<a class="card-file-chip" href="${escapeHtml(o.fileLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 File</a>`);
       if (o.logoFile && o.logoFile.url) files.push(`<a class="card-file-chip" href="${o.logoFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Logo</a>`);
       if (Array.isArray(o.refFiles) && o.refFiles.length) {
         o.refFiles.forEach((f, i) => files.push(`<a class="card-file-chip" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ref ${i + 1}</a>`));
@@ -543,6 +549,7 @@
     document.getElementById('fTentative').checked = o ? !!o.tentative : false;
     document.getElementById('fRush').checked = o ? !!o.rush : false;
     document.getElementById('fNotes').value = o ? (o.notes || '') : '';
+    document.getElementById('fFileLink').value = o ? (o.fileLink || '') : '';
     document.getElementById('fLogo').value = '';
     document.getElementById('fRefs').value = '';
     renderLogoMeta(o);
@@ -662,6 +669,7 @@
       tentative: document.getElementById('fTentative').checked,
       rush: document.getElementById('fRush').checked,
       notes: document.getElementById('fNotes').value.trim(),
+      fileLink: document.getElementById('fFileLink').value.trim(),
       logoFile, refFiles,
       completed: existing ? !!existing.completed : false,
       updatedAt: new Date().toISOString()
@@ -703,10 +711,28 @@
     closeDrawer();
   });
 
+  document.getElementById('completeBtn').addEventListener('click', async () => {
+    if (!editingId) return;
+    const existing = orders.find(x => x.id === editingId);
+    if (!existing) return;
+    const newCompleted = !existing.completed;
+    const patch = { completed: newCompleted, updatedAt: new Date().toISOString() };
+    if (liveMode) {
+      try { await setDoc(doc(db, ORDERS_COLLECTION, editingId), patch, { merge: true }); }
+      catch (e) { console.error('Update failed', e); alert('Could not update — check your connection and try again.'); }
+    } else {
+      orders = orders.map(o => o.id === editingId ? { ...o, ...patch } : o);
+      saveLocal(orders);
+      renderAll();
+    }
+    closeDrawer();
+  });
+
   [searchInput, statusFilter].forEach(el => {
     el.addEventListener('input', renderBoard);
     el.addEventListener('change', renderBoard);
   });
+  document.getElementById('showCompleted').addEventListener('change', renderBoard);
 
   init();
 </script>
