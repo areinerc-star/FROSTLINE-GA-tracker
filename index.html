@@ -99,7 +99,33 @@
   .drawer h2 { font-size: 1.4rem; margin: 0 0 1.05rem; }
   .field { margin-bottom: 0.9rem; }
   .field label.display { display: block; font-size: 0.68rem; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 0.3rem; }
-  .field input[type="text"], .field input[type="date"], .field select, .field textarea {
+  .items-list { display: flex; flex-direction: column; gap: 0.45rem; }
+  .item-row { display: grid; grid-template-columns: 1fr 84px 66px 34px; gap: 0.4rem; align-items: center; }
+  .item-row input { min-width: 0; }
+  .item-remove {
+    height: 100%; min-height: 36px; background: transparent; color: var(--ink-soft);
+    border: 1px solid var(--line); cursor: pointer; font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.85rem;
+  }
+  .item-remove:hover { color: var(--ink); border-color: var(--line-strong); }
+  .btn-add-item {
+    width: 100%; margin-top: 0.45rem; padding: 0.6rem; background: transparent; color: var(--ink-soft);
+    border: 1px dashed var(--line); cursor: pointer; font-family: "Antonio", sans-serif; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.75rem;
+  }
+  .btn-add-item:hover { color: var(--ink); border-color: var(--line-strong); }
+  .legacy-breakdown { font-size: 0.78rem; color: var(--stone); margin-bottom: 0.5rem; }
+  @media (max-width: 480px) {
+    .item-row { grid-template-columns: 1fr 1fr 34px; }
+    .item-row .item-name { grid-column: 1 / -1; }
+  }
+
+  .card-items { display: flex; flex-direction: column; gap: 0.15rem; margin: 0.1rem 0 0.2rem; }
+  .card-item { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; font-size: 0.8rem; opacity: 0.9; border-bottom: 1px dotted var(--line); padding-bottom: 0.15rem; }
+  .card-item .ci-size { min-width: 2.2rem; text-align: right; opacity: 0.8; }
+  .card-item .ci-qty { min-width: 2rem; text-align: right; font-weight: 700; }
+  .card-total { font-size: 0.72rem; opacity: 0.7; text-align: right; }
+
+  .field input[type="text"], .field input[type="date"], .field input[type="url"], .field input[type="number"], .field select, .field textarea {
     width: 100%; padding: 0.52rem 0.68rem; background: var(--bg-raised); border: 1px solid var(--line);
     color: var(--ink); font-family: "Times New Roman", Georgia, serif; font-size: 0.92rem;
   }
@@ -256,8 +282,14 @@
     </div>
 
     <div class="field">
-      <label class="display" for="fBreakdown">Breakdown</label>
-      <input type="text" id="fBreakdown" placeholder="e.g. 21 pcs Shirt / 2 pcs Polo / 7 pcs Short">
+      <label class="display">Order items</label>
+      <div class="legacy-breakdown" id="legacyBreakdown" style="display:none;"></div>
+      <div class="items-list" id="itemsList"></div>
+      <button type="button" class="btn-add-item" id="addItemBtn">+ Add item</button>
+      <datalist id="sizeList">
+        <option value="XS"><option value="S"><option value="M"><option value="L">
+        <option value="XL"><option value="2XL"><option value="3XL"><option value="4XL">
+      </datalist>
     </div>
 
     <div class="field-row">
@@ -501,6 +533,16 @@
       if (o.completed) card.style.opacity = '0.55';
 
       const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
+      const cardItems = Array.isArray(o.items) ? o.items.filter(i => i && (i.name || i.size || i.qty)) : [];
+      let itemsHtml = '';
+      if (cardItems.length) {
+        const total = cardItems.reduce((sum, i) => sum + (parseInt(i.qty, 10) || 0), 0);
+        itemsHtml = `<div class="card-items">` +
+          cardItems.map(i => `<div class="card-item"><span>${escapeHtml(i.name || '—')}</span><span class="ci-size">${escapeHtml(i.size || '')}</span><span class="ci-qty">${escapeHtml(String(i.qty || ''))}</span></div>`).join('') +
+          `</div>` + (total ? `<div class="card-total">Total ${total} pcs</div>` : '');
+      } else if (o.breakdown) {
+        itemsHtml = `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>`;
+      }
       const files = [];
       if (o.fileLink) files.push(`<a class="card-file-chip" href="${escapeHtml(o.fileLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 File</a>`);
       if (o.logoFile && o.logoFile.url) files.push(`<a class="card-file-chip" href="${o.logoFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Logo</a>`);
@@ -512,7 +554,7 @@
         <div class="status-strip"><span>${o.completed ? 'Completed' : (primary ? STATUS_LABELS[primary] : 'No status yet')}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
         <div class="card-body">
           <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
-          ${o.breakdown ? `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>` : ''}
+          ${itemsHtml}
           ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
           ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
           <div class="card-updated">Updated ${formatDate(o.updatedAt)}</div>
@@ -536,6 +578,44 @@
     return div.innerHTML;
   }
 
+  // ---------- order item rows (item name / size / qty) ----------
+  const itemsList = document.getElementById('itemsList');
+
+  function addItemRow(item) {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <input type="text" class="item-name" placeholder="Item (e.g. Singlet)" aria-label="Item name">
+      <input type="text" class="item-size" list="sizeList" placeholder="Size" aria-label="Size">
+      <input type="number" class="item-qty" min="0" inputmode="numeric" placeholder="Qty" aria-label="Quantity">
+      <button type="button" class="item-remove" aria-label="Remove item">x</button>
+    `;
+    row.querySelector('.item-name').value = (item && item.name) || '';
+    row.querySelector('.item-size').value = (item && item.size) || '';
+    row.querySelector('.item-qty').value = (item && item.qty) || '';
+    row.querySelector('.item-remove').addEventListener('click', () => {
+      row.remove();
+      if (!itemsList.children.length) addItemRow();
+    });
+    itemsList.appendChild(row);
+  }
+  function renderItemRows(items) {
+    itemsList.innerHTML = '';
+    items.forEach(addItemRow);
+  }
+  function collectItemRows() {
+    return Array.from(itemsList.querySelectorAll('.item-row')).map(row => ({
+      name: row.querySelector('.item-name').value.trim(),
+      size: row.querySelector('.item-size').value.trim(),
+      qty: row.querySelector('.item-qty').value.trim()
+    })).filter(i => i.name || i.size || i.qty);
+  }
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    addItemRow();
+    const last = itemsList.lastElementChild;
+    if (last) last.querySelector('.item-name').focus();
+  });
+
   function openDrawer(id) {
     editingId = id || null;
     pendingLogoFile = null; pendingLogoRemove = false;
@@ -544,7 +624,15 @@
     drawerTitle.textContent = o ? 'Edit Order' : 'New Order';
     document.getElementById('fClient').value = o ? (o.client || '') : '';
     document.getElementById('fStatus').value = o ? (primaryStatus(o) || 'new_client') : 'new_client';
-    document.getElementById('fBreakdown').value = o ? (o.breakdown || '') : '';
+    const existingItems = o && Array.isArray(o.items) ? o.items : [];
+    renderItemRows(existingItems.length ? existingItems : [{ name: '', size: '', qty: '' }]);
+    const legacyEl = document.getElementById('legacyBreakdown');
+    if (o && o.breakdown && !existingItems.length) {
+      legacyEl.textContent = 'Earlier breakdown: ' + o.breakdown;
+      legacyEl.style.display = 'block';
+    } else {
+      legacyEl.style.display = 'none';
+    }
     document.getElementById('fDeadline').value = o ? (o.deadline || '') : '';
     document.getElementById('fTentative').checked = o ? !!o.tentative : false;
     document.getElementById('fRush').checked = o ? !!o.rush : false;
@@ -628,6 +716,7 @@
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
 
+    const collectedItems = collectItemRows();
     const existing = editingId ? orders.find(x => x.id === editingId) : null;
     let logoFile = existing ? existing.logoFile : null;
     let refFiles = existing && Array.isArray(existing.refFiles) ? existing.refFiles.slice() : [];
@@ -664,7 +753,10 @@
     const record = {
       client,
       statuses: [document.getElementById('fStatus').value],
-      breakdown: document.getElementById('fBreakdown').value.trim(),
+      items: collectedItems,
+      breakdown: collectedItems.length
+        ? collectedItems.map(i => `${i.qty ? i.qty + ' ' : ''}${i.name}${i.size ? ' (' + i.size + ')' : ''}`).join(' / ')
+        : (existing && existing.breakdown ? existing.breakdown : ''),
       deadline: document.getElementById('fDeadline').value,
       tentative: document.getElementById('fTentative').checked,
       rush: document.getElementById('fRush').checked,
