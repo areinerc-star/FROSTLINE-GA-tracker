@@ -87,6 +87,12 @@
   .card-deadline { font-size: 0.76rem; opacity: 0.8; }
   .card-files { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.15rem; }
   .card-file-chip { font-size: 0.72rem; text-decoration: underline; opacity: 0.85; }
+  .card-note {
+    font-size: 0.8rem; font-weight: 700; line-height: 1.3;
+    border: 1px solid var(--line-strong); padding: 0.35rem 0.55rem;
+    margin: 0.1rem 0 0.15rem;
+  }
+  .card[data-status="production"] .card-note { border-color: var(--invert-ink); }
   .card-updated { font-size: 0.68rem; color: var(--stone); margin-top: auto; padding-top: 0.3rem; }
   .card[data-status="production"] .card-updated { color: inherit; opacity: 0.6; }
 
@@ -554,6 +560,7 @@
         <div class="status-strip"><span>${o.completed ? 'Completed' : (primary ? STATUS_LABELS[primary] : 'No status yet')}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
         <div class="card-body">
           <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
+          ${o.notes ? `<div class="card-note">🚩 ${escapeHtml(o.notes)}</div>` : ''}
           ${itemsHtml}
           ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
           ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
