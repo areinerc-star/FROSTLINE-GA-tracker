@@ -65,10 +65,27 @@
   .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .board {
-    max-width: 1220px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem;
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem;
-    align-items: start;
+    max-width: 1480px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem;
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 1.1rem;
   }
+  .status-cluster {
+    flex: 1 1 280px; min-width: 260px; max-width: 100%;
+    display: flex; flex-direction: column;
+  }
+  .cluster-header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+    padding: 0.5rem 0.15rem 0.6rem; margin-bottom: 0.7rem;
+    border-bottom: 2px solid var(--line-strong);
+    cursor: pointer; user-select: none;
+  }
+  .cluster-header .cl-name { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; }
+  .cluster-header .cl-chevron { width: 9px; height: 9px; transition: transform 0.2s cubic-bezier(0.16,1,0.3,1); flex-shrink: 0; }
+  .cluster-header .cl-chevron path { stroke: currentColor; }
+  .status-cluster.collapsed .cl-chevron { transform: rotate(-90deg); }
+  .cluster-header .cl-count { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.78rem; color: var(--stone); border: 1px solid var(--line); padding: 0.05rem 0.4rem; }
+  .cluster-cards { display: flex; flex-direction: column; gap: 0.8rem; min-height: 40px; }
+  .status-cluster.collapsed .cluster-cards { display: none; }
+  .cluster-empty { font-size: 0.74rem; color: var(--stone); padding: 0.6rem 0.2rem; border: 1px dashed var(--line); text-align: center; }
 
   .card {
     border: 1px solid var(--line); background: var(--bg-raised); cursor: pointer;
@@ -108,7 +125,7 @@
   .card-updated { font-size: 0.68rem; color: var(--stone); margin-top: auto; padding-top: 0.3rem; }
   .card[data-status="production"] .card-updated { color: inherit; opacity: 0.6; }
 
-  .empty-state { grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: var(--stone); }
+  .empty-state { width: 100%; text-align: center; padding: 3.5rem 1rem; color: var(--stone); }
   .empty-state .display { font-size: 1.5rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; padding: 4vh 1rem; overflow-y: auto; z-index: 50; }
@@ -174,9 +191,8 @@
 
   footer { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem 2.5rem; color: var(--stone); font-size: 0.76rem; }
 
-  @media (max-width: 900px) { .board { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) {
-    .board { grid-template-columns: 1fr; }
+    .status-cluster { flex: 1 1 100%; }
     .stats { justify-content: flex-start; gap: 0.9rem; }
     .search, select.filter, .btn-add { min-height: 44px; }
     .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; }
@@ -418,6 +434,7 @@
   let pendingLogoFile = null, pendingLogoRemove = false;
   let pendingRefFiles = [];
   let pendingRefRemoveIds = new Set();
+  const collapsedClusters = new Set();
 
   const banner = document.getElementById('syncBanner');
   const board = document.getElementById('board');
@@ -564,6 +581,35 @@
     return card;
   }
 
+  function buildCluster(key, label, list) {
+    const cluster = document.createElement('section');
+    cluster.className = 'status-cluster' + (collapsedClusters.has(key) ? ' collapsed' : '');
+    cluster.dataset.cluster = key;
+    const header = document.createElement('div');
+    header.className = 'cluster-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', String(!collapsedClusters.has(key)));
+    header.innerHTML = `<span class="cl-name display"><svg class="cl-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>${escapeHtml(label)}</span><span class="cl-count">${list.length}</span>`;
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'cluster-cards';
+    if (list.length === 0) {
+      cardsWrap.innerHTML = `<div class="cluster-empty">No orders here</div>`;
+    } else {
+      list.forEach(o => cardsWrap.appendChild(buildCardEl(o)));
+    }
+    function toggle() {
+      const nowCollapsed = cluster.classList.toggle('collapsed');
+      if (nowCollapsed) collapsedClusters.add(key); else collapsedClusters.delete(key);
+      header.setAttribute('aria-expanded', String(!nowCollapsed));
+    }
+    header.addEventListener('click', toggle);
+    header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    cluster.appendChild(header);
+    cluster.appendChild(cardsWrap);
+    return cluster;
+  }
+
   function renderBoard() {
     const q = searchInput.value.trim().toLowerCase();
     const sf = statusFilter.value;
@@ -575,14 +621,28 @@
       if (q && !(o.client || '').toLowerCase().includes(q)) return false;
       return true;
     });
-    filtered.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
     board.innerHTML = '';
     if (filtered.length === 0) {
       board.innerHTML = `<div class="empty-state"><div class="display">Nothing here yet</div><div>Try a different filter, or add a new order.</div></div>`;
       return;
     }
-    filtered.forEach(o => board.appendChild(buildCardEl(o)));
+
+    const byUpdated = (a, b) => (a.updatedAt < b.updatedAt ? 1 : -1);
+    const active = filtered.filter(o => !o.completed);
+    const columns = sf ? [sf] : STATUS_ORDER.slice();
+
+    columns.forEach(statusKey => {
+      const list = active.filter(o => primaryStatus(o) === statusKey).sort(byUpdated);
+      board.appendChild(buildCluster(statusKey, STATUS_LABELS[statusKey], list));
+    });
+
+    if (showCompleted) {
+      const completedList = filtered.filter(o => o.completed).sort(byUpdated);
+      if (completedList.length || !sf) {
+        board.appendChild(buildCluster('completed', 'Completed', completedList));
+      }
+    }
   }
 
   function formatDate(iso) {
