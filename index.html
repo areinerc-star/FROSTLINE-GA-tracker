@@ -66,22 +66,25 @@
 
   .board {
     max-width: 1480px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem;
-    display: flex; align-items: flex-start; gap: 1.1rem;
-    overflow-x: auto; scroll-snap-type: x proximity;
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 1.1rem;
   }
   .status-cluster {
-    flex: 0 0 300px; width: 300px; scroll-snap-align: start;
+    flex: 1 1 220px; min-width: 220px;
     display: flex; flex-direction: column;
   }
   .cluster-header {
     display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
     padding: 0.5rem 0.15rem 0.6rem; margin-bottom: 0.7rem;
     border-bottom: 2px solid var(--line-strong);
-    position: sticky; top: 0; background: var(--bg); z-index: 2;
+    cursor: pointer; user-select: none;
   }
-  .cluster-header .cl-name { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .cluster-header .cl-name { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; }
+  .cluster-header .cl-chevron { width: 9px; height: 9px; transition: transform 0.2s cubic-bezier(0.16,1,0.3,1); flex-shrink: 0; }
+  .cluster-header .cl-chevron path { stroke: currentColor; }
+  .status-cluster.collapsed .cl-chevron { transform: rotate(-90deg); }
   .cluster-header .cl-count { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.78rem; color: var(--stone); border: 1px solid var(--line); padding: 0.05rem 0.4rem; }
   .cluster-cards { display: flex; flex-direction: column; gap: 0.8rem; min-height: 40px; }
+  .status-cluster.collapsed .cluster-cards { display: none; }
   .cluster-empty { font-size: 0.74rem; color: var(--stone); padding: 0.6rem 0.2rem; border: 1px dashed var(--line); text-align: center; }
 
   .card {
@@ -98,7 +101,6 @@
   .card[data-status="proposing"] .status-strip { border-bottom-style: dashed; color: var(--ink); }
   .card[data-status="mockup"] .status-strip { border-bottom: 2px dashed var(--line-strong); color: var(--ink); }
   .card[data-status="revise"] .status-strip { background: repeating-linear-gradient(45deg, transparent, transparent 6px, var(--line) 6px, var(--line) 7px); color: var(--ink); }
-  .card[data-status="approved"] .status-strip { border-bottom: 3px solid var(--line-strong); color: var(--ink); }
   .card[data-status="production"] { background: var(--invert-bg); color: var(--invert-ink); }
   .card[data-status="production"] .status-strip { background: var(--invert-bg); color: var(--invert-ink); border-bottom: 3px solid var(--invert-ink); }
 
@@ -190,7 +192,7 @@
   footer { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem 2.5rem; color: var(--stone); font-size: 0.76rem; }
 
   @media (max-width: 560px) {
-    .status-cluster { flex: 0 0 86vw; width: 86vw; }
+    .status-cluster { flex: 1 1 100%; }
     .stats { justify-content: flex-start; gap: 0.9rem; }
     .search, select.filter, .btn-add { min-height: 44px; }
     .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; }
@@ -281,7 +283,6 @@
     <option value="proposing">Proposing Design</option>
     <option value="mockup">For Mock Up</option>
     <option value="revise">Request Revision</option>
-    <option value="approved">Approved</option>
     <option value="production">For Production</option>
   </select>
   <label class="checkline" style="margin-bottom:0;"><input type="checkbox" id="showCompleted"> Show completed</label>
@@ -308,7 +309,6 @@
         <option value="proposing">Proposing Design</option>
         <option value="mockup">For Mock Up</option>
         <option value="revise">Request Revision</option>
-        <option value="approved">Approved</option>
         <option value="production">For Production</option>
       </select>
     </div>
@@ -404,9 +404,9 @@
 
   const STATUS_LABELS = {
     new_client: 'New Client', proposing: 'Proposing Design', mockup: 'For Mock Up',
-    revise: 'Request Revision', approved: 'Approved', production: 'For Production'
+    revise: 'Request Revision', production: 'For Production'
   };
-  const STATUS_ORDER = ['new_client', 'proposing', 'mockup', 'revise', 'approved', 'production'];
+  const STATUS_ORDER = ['new_client', 'proposing', 'mockup', 'revise', 'production'];
   const LOCAL_KEY = 'frostline-lineup-fallback-v1';
 
   // Back-compat: older records may have a single `status` string instead of
@@ -434,6 +434,7 @@
   let pendingLogoFile = null, pendingLogoRemove = false;
   let pendingRefFiles = [];
   let pendingRefRemoveIds = new Set();
+  const collapsedClusters = new Set();
 
   const banner = document.getElementById('syncBanner');
   const board = document.getElementById('board');
@@ -466,7 +467,7 @@
   const seedRows = [
     { client: 'Green Archer II', statuses: ['new_client', 'proposing', 'mockup'], breakdown: '21 pcs Shirt / 2 pcs Polo / 7 pcs Short', deadline: '', tentative: true, rush: false, notes: 'Awaiting logo file from client.' },
     { client: 'Pilipinas Relay Team', statuses: ['new_client', 'proposing', 'mockup', 'revise'], breakdown: '30 pcs Singlet', deadline: '', tentative: false, rush: true, notes: 'Client wants bolder chevron on the back.' },
-    { client: 'PR Project Community', statuses: ['new_client', 'proposing', 'mockup', 'approved'], breakdown: '50 pcs Tshirt', deadline: '', tentative: false, rush: false, notes: 'Signed off — ready to hand to production.' },
+    { client: 'PR Project Community', statuses: ['new_client', 'proposing', 'mockup', 'production'], breakdown: '50 pcs Tshirt', deadline: '', tentative: false, rush: false, notes: 'Signed off — ready to hand to production.' },
     { client: 'Northside Track Club', statuses: ['new_client'], breakdown: '', deadline: '', tentative: true, rush: false, notes: 'Just submitted intake form, no brief yet.' }
   ];
 
@@ -526,7 +527,7 @@
   function renderStats() {
     const active = orders.filter(o => !o.completed);
     const completedCount = orders.length - active.length;
-    const counts = { new_client: 0, proposing: 0, mockup: 0, revise: 0, approved: 0, production: 0 };
+    const counts = { new_client: 0, proposing: 0, mockup: 0, revise: 0, production: 0 };
     active.forEach(o => { getStatuses(o).forEach(s => { if (counts[s] !== undefined) counts[s]++; }); });
     let html = `<div class="stat"><span class="num display">${active.length}</span><span class="lbl">Total</span></div>`;
     STATUS_ORDER.forEach(k => {
@@ -582,11 +583,14 @@
 
   function buildCluster(key, label, list) {
     const cluster = document.createElement('section');
-    cluster.className = 'status-cluster';
+    cluster.className = 'status-cluster' + (collapsedClusters.has(key) ? ' collapsed' : '');
     cluster.dataset.cluster = key;
     const header = document.createElement('div');
     header.className = 'cluster-header';
-    header.innerHTML = `<span class="cl-name display">${escapeHtml(label)}</span><span class="cl-count">${list.length}</span>`;
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', String(!collapsedClusters.has(key)));
+    header.innerHTML = `<span class="cl-name display"><svg class="cl-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>${escapeHtml(label)}</span><span class="cl-count">${list.length}</span>`;
     const cardsWrap = document.createElement('div');
     cardsWrap.className = 'cluster-cards';
     if (list.length === 0) {
@@ -594,6 +598,13 @@
     } else {
       list.forEach(o => cardsWrap.appendChild(buildCardEl(o)));
     }
+    function toggle() {
+      const nowCollapsed = cluster.classList.toggle('collapsed');
+      if (nowCollapsed) collapsedClusters.add(key); else collapsedClusters.delete(key);
+      header.setAttribute('aria-expanded', String(!nowCollapsed));
+    }
+    header.addEventListener('click', toggle);
+    header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     cluster.appendChild(header);
     cluster.appendChild(cardsWrap);
     return cluster;
