@@ -64,9 +64,33 @@
   .btn-add:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
   .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .board { max-width: 1220px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
-  .card { border: 1px solid var(--line); background: var(--bg-raised); cursor: pointer; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.12s ease; }
-  .card:hover { transform: translateY(-2px); }
+  .board {
+    max-width: 1480px; margin: 0 auto; padding: 1.6rem 1.75rem 3rem;
+    display: flex; align-items: flex-start; gap: 1.1rem;
+    overflow-x: auto; scroll-snap-type: x proximity;
+  }
+  .status-cluster {
+    flex: 0 0 300px; width: 300px; scroll-snap-align: start;
+    display: flex; flex-direction: column;
+  }
+  .cluster-header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+    padding: 0.5rem 0.15rem 0.6rem; margin-bottom: 0.7rem;
+    border-bottom: 2px solid var(--line-strong);
+    position: sticky; top: 0; background: var(--bg); z-index: 2;
+  }
+  .cluster-header .cl-name { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .cluster-header .cl-count { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.78rem; color: var(--stone); border: 1px solid var(--line); padding: 0.05rem 0.4rem; }
+  .cluster-cards { display: flex; flex-direction: column; gap: 0.8rem; min-height: 40px; }
+  .cluster-empty { font-size: 0.74rem; color: var(--stone); padding: 0.6rem 0.2rem; border: 1px dashed var(--line); text-align: center; }
+
+  .card {
+    border: 1px solid var(--line); background: var(--bg-raised); cursor: pointer;
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s cubic-bezier(0.16,1,0.3,1);
+    flex-shrink: 0;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(0,0,0,0.5); }
   .card:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
 
   .status-strip { padding: 0.4rem 0.9rem; font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
@@ -99,7 +123,7 @@
   .card-updated { font-size: 0.68rem; color: var(--stone); margin-top: auto; padding-top: 0.3rem; }
   .card[data-status="production"] .card-updated { color: inherit; opacity: 0.6; }
 
-  .empty-state { grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: var(--stone); }
+  .empty-state { width: 100%; text-align: center; padding: 3.5rem 1rem; color: var(--stone); }
   .empty-state .display { font-size: 1.5rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; padding: 4vh 1rem; overflow-y: auto; z-index: 50; }
@@ -165,9 +189,8 @@
 
   footer { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem 2.5rem; color: var(--stone); font-size: 0.76rem; }
 
-  @media (max-width: 900px) { .board { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) {
-    .board { grid-template-columns: 1fr; }
+    .status-cluster { flex: 0 0 86vw; width: 86vw; }
     .stats { justify-content: flex-start; gap: 0.9rem; }
     .search, select.filter, .btn-add { min-height: 44px; }
     .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; }
@@ -257,9 +280,9 @@
     <option value="new_client">New Client</option>
     <option value="proposing">Proposing Design</option>
     <option value="mockup">For Mock Up</option>
-    <option value="revise">Error Revision</option>
+    <option value="revise">Request Revision</option>
     <option value="approved">Approved</option>
-    <option value="production">In Production</option>
+    <option value="production">For Production</option>
   </select>
   <label class="checkline" style="margin-bottom:0;"><input type="checkbox" id="showCompleted"> Show completed</label>
   <button class="btn-add" id="addBtn">+ New Order</button>
@@ -284,9 +307,9 @@
         <option value="new_client">New Client</option>
         <option value="proposing">Proposing Design</option>
         <option value="mockup">For Mock Up</option>
-        <option value="revise">Error Revision</option>
+        <option value="revise">Request Revision</option>
         <option value="approved">Approved</option>
-        <option value="production">In Production</option>
+        <option value="production">For Production</option>
       </select>
     </div>
 
@@ -381,7 +404,7 @@
 
   const STATUS_LABELS = {
     new_client: 'New Client', proposing: 'Proposing Design', mockup: 'For Mock Up',
-    revise: 'Error Revision', approved: 'Approved', production: 'In Production'
+    revise: 'Request Revision', approved: 'Approved', production: 'For Production'
   };
   const STATUS_ORDER = ['new_client', 'proposing', 'mockup', 'revise', 'approved', 'production'];
   const LOCAL_KEY = 'frostline-lineup-fallback-v1';
@@ -513,6 +536,69 @@
     statsBar.innerHTML = html;
   }
 
+  function buildCardEl(o) {
+    const primary = primaryStatus(o);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.status = primary || '';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Edit ${o.client}`);
+    if (o.completed) card.style.opacity = '0.55';
+
+    const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
+    const cardItems = Array.isArray(o.items) ? o.items.filter(i => i && (i.name || i.size || i.qty)) : [];
+    let itemsHtml = '';
+    if (cardItems.length) {
+      const total = cardItems.reduce((sum, i) => sum + (parseInt(i.qty, 10) || 0), 0);
+      itemsHtml = `<div class="card-items">` +
+        cardItems.map(i => `<div class="card-item"><span>${escapeHtml(i.name || '—')}</span><span class="ci-size">${escapeHtml(i.size || '')}</span><span class="ci-qty">${escapeHtml(String(i.qty || ''))}</span></div>`).join('') +
+        `</div>` + (total ? `<div class="card-total">Total ${total} pcs</div>` : '');
+    } else if (o.breakdown) {
+      itemsHtml = `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>`;
+    }
+    const files = [];
+    if (o.fileLink) files.push(`<a class="card-file-chip" href="${escapeHtml(o.fileLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:2px;"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.19 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>File</a>`);
+    if (o.logoFile && o.logoFile.url) files.push(`<a class="card-file-chip" href="${o.logoFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Logo</a>`);
+    if (Array.isArray(o.refFiles) && o.refFiles.length) {
+      o.refFiles.forEach((f, i) => files.push(`<a class="card-file-chip" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ref ${i + 1}</a>`));
+    }
+
+    card.innerHTML = `
+      <div class="status-strip"><span>${o.completed ? 'Completed' : (primary ? STATUS_LABELS[primary] : 'No status yet')}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
+      <div class="card-body">
+        <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
+        ${o.notes ? `<div class="card-note"><svg class="note-flag" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 21V4a1 1 0 0 1 1-1h12.5a.5.5 0 0 1 .4.8l-3.3 4.4a.5.5 0 0 0 0 .6l3.3 4.4a.5.5 0 0 1-.4.8H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="note-text">${escapeHtml(o.notes)}</span></div>` : ''}
+        ${itemsHtml}
+        ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
+        ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
+        <div class="card-updated">Updated ${formatDate(o.updatedAt)}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => openDrawer(o.id));
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(o.id); } });
+    return card;
+  }
+
+  function buildCluster(key, label, list) {
+    const cluster = document.createElement('section');
+    cluster.className = 'status-cluster';
+    cluster.dataset.cluster = key;
+    const header = document.createElement('div');
+    header.className = 'cluster-header';
+    header.innerHTML = `<span class="cl-name display">${escapeHtml(label)}</span><span class="cl-count">${list.length}</span>`;
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'cluster-cards';
+    if (list.length === 0) {
+      cardsWrap.innerHTML = `<div class="cluster-empty">No orders here</div>`;
+    } else {
+      list.forEach(o => cardsWrap.appendChild(buildCardEl(o)));
+    }
+    cluster.appendChild(header);
+    cluster.appendChild(cardsWrap);
+    return cluster;
+  }
+
   function renderBoard() {
     const q = searchInput.value.trim().toLowerCase();
     const sf = statusFilter.value;
@@ -524,56 +610,28 @@
       if (q && !(o.client || '').toLowerCase().includes(q)) return false;
       return true;
     });
-    filtered.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 
     board.innerHTML = '';
     if (filtered.length === 0) {
       board.innerHTML = `<div class="empty-state"><div class="display">Nothing here yet</div><div>Try a different filter, or add a new order.</div></div>`;
       return;
     }
-    filtered.forEach(o => {
-      const primary = primaryStatus(o);
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.dataset.status = primary || '';
-      card.tabIndex = 0;
-      card.setAttribute('role', 'button');
-      card.setAttribute('aria-label', `Edit ${o.client}`);
-      if (o.completed) card.style.opacity = '0.55';
 
-      const deadlineText = o.deadline ? (o.tentative ? '~ ' : '') + formatDate(o.deadline) : '';
-      const cardItems = Array.isArray(o.items) ? o.items.filter(i => i && (i.name || i.size || i.qty)) : [];
-      let itemsHtml = '';
-      if (cardItems.length) {
-        const total = cardItems.reduce((sum, i) => sum + (parseInt(i.qty, 10) || 0), 0);
-        itemsHtml = `<div class="card-items">` +
-          cardItems.map(i => `<div class="card-item"><span>${escapeHtml(i.name || '—')}</span><span class="ci-size">${escapeHtml(i.size || '')}</span><span class="ci-qty">${escapeHtml(String(i.qty || ''))}</span></div>`).join('') +
-          `</div>` + (total ? `<div class="card-total">Total ${total} pcs</div>` : '');
-      } else if (o.breakdown) {
-        itemsHtml = `<div class="card-breakdown">${escapeHtml(o.breakdown)}</div>`;
-      }
-      const files = [];
-      if (o.fileLink) files.push(`<a class="card-file-chip" href="${escapeHtml(o.fileLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 File</a>`);
-      if (o.logoFile && o.logoFile.url) files.push(`<a class="card-file-chip" href="${o.logoFile.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Logo</a>`);
-      if (Array.isArray(o.refFiles) && o.refFiles.length) {
-        o.refFiles.forEach((f, i) => files.push(`<a class="card-file-chip" href="${f.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ref ${i + 1}</a>`));
-      }
+    const byUpdated = (a, b) => (a.updatedAt < b.updatedAt ? 1 : -1);
+    const active = filtered.filter(o => !o.completed);
+    const columns = sf ? [sf] : STATUS_ORDER.slice();
 
-      card.innerHTML = `
-        <div class="status-strip"><span>${o.completed ? 'Completed' : (primary ? STATUS_LABELS[primary] : 'No status yet')}</span>${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}</div>
-        <div class="card-body">
-          <div class="card-title display">${escapeHtml(o.client || 'Untitled')}</div>
-          ${o.notes ? `<div class="card-note"><svg class="note-flag" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 21V4a1 1 0 0 1 1-1h12.5a.5.5 0 0 1 .4.8l-3.3 4.4a.5.5 0 0 0 0 .6l3.3 4.4a.5.5 0 0 1-.4.8H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="note-text">${escapeHtml(o.notes)}</span></div>` : ''}
-          ${itemsHtml}
-          ${deadlineText ? `<div class="card-deadline">Due ${deadlineText}</div>` : ''}
-          ${files.length ? `<div class="card-files">${files.join('')}</div>` : ''}
-          <div class="card-updated">Updated ${formatDate(o.updatedAt)}</div>
-        </div>
-      `;
-      card.addEventListener('click', () => openDrawer(o.id));
-      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(o.id); } });
-      board.appendChild(card);
+    columns.forEach(statusKey => {
+      const list = active.filter(o => primaryStatus(o) === statusKey).sort(byUpdated);
+      board.appendChild(buildCluster(statusKey, STATUS_LABELS[statusKey], list));
     });
+
+    if (showCompleted) {
+      const completedList = filtered.filter(o => o.completed).sort(byUpdated);
+      if (completedList.length || !sf) {
+        board.appendChild(buildCluster('completed', 'Completed', completedList));
+      }
+    }
   }
 
   function formatDate(iso) {
