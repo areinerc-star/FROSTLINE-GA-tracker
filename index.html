@@ -83,7 +83,9 @@
   .cluster-header .cl-chevron path { stroke: currentColor; }
   .status-cluster.collapsed .cl-chevron { transform: rotate(-90deg); }
   .cluster-header .cl-count { font-family: "Antonio", sans-serif; font-weight: 700; font-size: 0.78rem; color: var(--stone); border: 1px solid var(--line); padding: 0.05rem 0.4rem; }
-  .cluster-cards { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 0.9rem; min-height: 40px; }
+  .cluster-cards {
+    column-width: 290px; column-gap: 0.9rem; min-height: 40px;
+  }
   .status-cluster.collapsed .cluster-cards { display: none; }
   .cluster-empty { font-size: 0.74rem; color: var(--stone); padding: 0.6rem 0.2rem; border: 1px dashed var(--line); text-align: center; }
 
@@ -91,7 +93,7 @@
     border: 1px solid var(--line); background: var(--bg-raised); cursor: pointer;
     display: flex; flex-direction: column; overflow: hidden;
     transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s cubic-bezier(0.16,1,0.3,1);
-    flex: 0 1 300px; width: 300px;
+    width: 100%; break-inside: avoid; margin: 0 0 0.9rem;
   }
   .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(0,0,0,0.5); }
   .card:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
@@ -192,7 +194,7 @@
   footer { max-width: 1220px; margin: 0 auto; padding: 1.1rem 1.75rem 2.5rem; color: var(--stone); font-size: 0.76rem; }
 
   @media (max-width: 560px) {
-    .card { flex-basis: 100%; width: 100%; }
+    .cluster-cards { column-width: 100%; }
     .stats { justify-content: flex-start; gap: 0.9rem; }
     .search, select.filter, .btn-add { min-height: 44px; }
     .btn-primary, .btn-secondary, .btn-danger { min-height: 44px; }
